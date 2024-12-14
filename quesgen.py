@@ -11,8 +11,8 @@ nlp = spacy.load("en_core_web_sm")
 
 # Function to load the saved model and tokenizer from pickle files in the pklmodels directory
 def load_model_from_pkl(model_name):
-    model_path = f"pklmodels/{model_name}_model.pkl"
-    tokenizer_path = f"pklmodels/{model_name}_tokenizer.pkl"
+    model_path = f"./{model_name}_model.pkl"
+    tokenizer_path = f"./{model_name}_tokenizer.pkl"
     
     with open(model_path, "rb") as model_file:
         model = pickle.load(model_file)
