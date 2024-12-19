@@ -29,7 +29,7 @@ class StoryGenerator:
     def choose_theme_prompt(self, theme):
         return self.themes.get(theme, "Your adventure begins...")
 
-    def generate_story(self, theme, player_action, game_history, max_new_tokens=300):
+    def generate_story(self, theme, player_action, game_history, max_new_tokens=75):
         try:
             # Get the prompt based on the theme
             theme_prompt = self.choose_theme_prompt(theme)
