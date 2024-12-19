@@ -1,88 +1,83 @@
 from story_generator import StoryGenerator
-from player import Player
-from combat import combat
-import pyttsx3
-import random
-
-# Text-to-speech initialization
-tts_engine = pyttsx3.init()
-tts_engine.setProperty("rate", 150)
-tts_engine.setProperty("voice", tts_engine.getProperty('voices')[1].id)  # Deep voice
-
-# Global dictionary to store player data
-game_data = {"players": [], "story": ""}
-
-def roll_dice(sides=20):
-    return random.randint(1, sides)
-
-# Function to truncate the prompt to a reasonable length
-def truncate_prompt(prompt, max_tokens=50):
-    words = prompt.split()
-    if len(words) > max_tokens:
-        return " ".join(words[-max_tokens:])
-    return prompt
+from game_logic import create_character, Player
+from voice_recognition import listen_for_input
+from narrator import setup_narrator, speak
 
 def main():
-    print("Welcome to your AI Dungeon Master!")
-    story_gen = StoryGenerator()
-    theme = "Dungeons & Dragons"
+    print("Welcome to the AI Dungeon Master!")
 
-    # Create multiple characters
-    num_players = int(input("Enter the number of players: "))
+    # Set up the narrator for scary voice
+    narrator = setup_narrator()
+    speak("Welcome to the AI Dungeon Master!", narrator)
+
+    # Theme selection
+    themes = [
+        "Dark Dungeon", "Medieval Castle", "Enchanted Forest",
+        "Dwarven Peaks", "Ancient Desert", "Pirate Cove",
+        "Celestial Realm", "Volcanic Depths", "Crystal Caves", "Lost Frontier"
+    ]
+    for i, theme in enumerate(themes, start=1):
+        print(f"{i}. {theme}")
+    theme_choice = int(input("Enter the number of your chosen theme: ").strip())
+    chosen_theme = themes[theme_choice - 1]
+    print(f"\nYou selected: {chosen_theme}")
+    speak(f"You selected {chosen_theme}.", narrator)
+
+    # Character creation
+    num_players = int(input("\nEnter the number of players: ").strip())
+    players = []
     for i in range(num_players):
         print(f"\nPlayer {i + 1} Character Creation:")
-        name = input("Enter your character's name: ")
-        player_class = input("Choose your class (e.g., Warrior, Mage, Rogue): ")
-        race = input("Choose your race (e.g., Human, Elf, Dwarf): ")
+        players.append(create_character())
+    for player in players:
+        print(f"Character Created: {player}")
+        speak(f"Character created: {player}", narrator)
 
-        # Add player to the global list
-        player = Player(name, player_class, race)
-        game_data["players"].append(player)
-        print(f"Character Created: {player.display_stats()}")
+    # Initialize Story Generator
+    story_gen = StoryGenerator()
+    game_history = story_gen.choose_theme_prompt(chosen_theme)
+    speak(game_history, narrator)
 
-    # Initial story prompt
-    game_data["story"] = (
-        f"You and your party find yourselves in a dark dungeon. "
-        f"A dragon's roar echoes through the halls. What do you do?"
-    )
-    tts_engine.say(game_data["story"])
-    tts_engine.runAndWait()
-
-    # Main game loop
+    # Game loop
     current_player_index = 0
     while True:
-        current_player = game_data["players"][current_player_index]
-        print(f"\n{game_data['story']}")
-        print(f"\nIt's {current_player.name}'s turn!")
+        try:
+            current_player = players[current_player_index]
+            print(f"\nIt's {current_player.name}'s turn!")
+            speak(f"It's {current_player.name}'s turn!", narrator)
 
-        user_action = input(f"{current_player.name}, what do you do? ('quit' to exit): ").lower()
+            user_action = listen_for_input()
 
-        if user_action in ["quit", "exit"]:
-            print("Thank you for playing! Goodbye!")
+            if "quit" in user_action:
+                print("Thank you for playing! Goodbye!")
+                speak("Thank you for playing! Goodbye!", narrator)
+                break
+
+            if "text mode" in user_action:
+                print("Switching to text input mode...")
+                speak("Switching to text input mode.", narrator)
+                user_action = input("Enter your action: ").strip()
+
+            if user_action:
+                response = story_gen.generate_story(
+                    theme=chosen_theme,
+                    player_action=user_action,
+                    game_history=game_history
+                )
+                print(f"AI Dungeon Master: {response}")
+                speak(response, narrator)
+                game_history += f" {response}"
+            else:
+                print("No action detected. Skipping turn.")
+                speak("No action detected. Skipping turn.", narrator)
+
+            current_player_index = (current_player_index + 1) % len(players)
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            speak("An error occurred. Please try again.", narrator)
             break
 
-        # Process the player's action and update the shared story
-        if "attack" in user_action:
-            enemy = random.choice(["Orc", "Goblin", "Skeleton"])
-            combat(current_player, enemy, random.randint(30, 100))
-            game_data["story"] += f" {current_player.name} attacked the {enemy}!"
-        elif "inventory" in user_action:
-            print(current_player.view_inventory())
-        elif "search" in user_action:
-            item = random.choice(["Potion", "Gold", "Magic Scroll"])
-            print(current_player.add_to_inventory(item))
-            game_data["story"] += f" {current_player.name} searched the room and found a {item}!"
-        elif "stats" in user_action:
-            print(current_player.display_stats())
-        else:
-            # Truncate the prompt and generate a response
-            updated_prompt = truncate_prompt(f"{game_data['story']} {current_player.name} decided to {user_action}.")
-            response = story_gen.generate_story(updated_prompt)
-            print(f"AI Dungeon Master: {response}")
-            game_data["story"] = response  # Update the shared story
-
-        # Move to the next player's turn
-        current_player_index = (current_player_index + 1) % num_players
 
 if __name__ == "__main__":
     main()
