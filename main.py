@@ -1,29 +1,57 @@
+import time
 from story_generator import StoryGenerator
 from game_logic import create_character, Player
-from voice_recognition import listen_for_input
 from narrator import setup_narrator, speak
+
+# List of available commands
+COMMANDS = [
+    "explore - Look around your surroundings.",
+    "attack - Attack a nearby enemy.",
+    "use [item] - Use an item from your inventory.",
+    "run - Attempt to flee the current situation.",
+    "talk - Try to communicate with a character or enemy.",
+    "quit - Exit the game.",
+]
+
+def display_commands():
+    print("\nAvailable commands:")
+    for command in COMMANDS:
+        print(f"- {command}")
 
 def main():
     print("Welcome to the AI Dungeon Master!")
 
-    # Set up the narrator for scary voice
+    # Set up the narrator with a scary voice for added immersion
     narrator = setup_narrator()
     speak("Welcome to the AI Dungeon Master!", narrator)
 
-    # Theme selection
+    # Theme Selection
     themes = [
         "Dark Dungeon", "Medieval Castle", "Enchanted Forest",
         "Dwarven Peaks", "Ancient Desert", "Pirate Cove",
         "Celestial Realm", "Volcanic Depths", "Crystal Caves", "Lost Frontier"
     ]
+    print("\nChoose a theme for your adventure:")
     for i, theme in enumerate(themes, start=1):
         print(f"{i}. {theme}")
-    theme_choice = int(input("Enter the number of your chosen theme: ").strip())
-    chosen_theme = themes[theme_choice - 1]
+
+    while True:
+        try:
+            theme_choice = int(input("Enter the number of your chosen theme: ").strip())
+            if 1 <= theme_choice <= len(themes):
+                chosen_theme = themes[theme_choice - 1]
+                break
+            else:
+                print("Invalid choice. Please select a valid number.")
+                speak("Invalid choice. Please select a valid number.", narrator)
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            speak("Invalid input. Please enter a number.", narrator)
+
     print(f"\nYou selected: {chosen_theme}")
     speak(f"You selected {chosen_theme}.", narrator)
 
-    # Character creation
+    # Character Creation
     num_players = int(input("\nEnter the number of players: ").strip())
     players = []
     for i in range(num_players):
@@ -36,9 +64,10 @@ def main():
     # Initialize Story Generator
     story_gen = StoryGenerator()
     game_history = story_gen.choose_theme_prompt(chosen_theme)
+    print(f"\n{game_history}")
     speak(game_history, narrator)
 
-    # Game loop
+    # Game Loop
     current_player_index = 0
     while True:
         try:
@@ -46,18 +75,18 @@ def main():
             print(f"\nIt's {current_player.name}'s turn!")
             speak(f"It's {current_player.name}'s turn!", narrator)
 
-            user_action = listen_for_input()
+            # Display available commands
+            display_commands()
+
+            # Get User Action via Text Input
+            user_action = input("\nEnter your action: ").strip()
 
             if "quit" in user_action:
                 print("Thank you for playing! Goodbye!")
                 speak("Thank you for playing! Goodbye!", narrator)
                 break
 
-            if "text mode" in user_action:
-                print("Switching to text input mode...")
-                speak("Switching to text input mode.", narrator)
-                user_action = input("Enter your action: ").strip()
-
+            # Process User Action
             if user_action:
                 response = story_gen.generate_story(
                     theme=chosen_theme,
@@ -66,11 +95,12 @@ def main():
                 )
                 print(f"AI Dungeon Master: {response}")
                 speak(response, narrator)
-                game_history += f" {response}"
+                game_history += f"\n{response}"
             else:
                 print("No action detected. Skipping turn.")
                 speak("No action detected. Skipping turn.", narrator)
 
+            # Switch to Next Player
             current_player_index = (current_player_index + 1) % len(players)
 
         except Exception as e:
