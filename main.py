@@ -1,8 +1,8 @@
 import random
-from story_generator import StoryGenerator
 from game_logic import create_character
 from combat import Enemy, engage_combat
 from narrator import setup_narrator, speak
+from story_generator import StoryGenerator
 
 # List of available commands
 COMMANDS = [
@@ -26,6 +26,9 @@ def main():
     # Set up the narrator
     narrator = setup_narrator()
     speak("Welcome to the AI Dungeon Master!", narrator)
+
+    # Initialize Story Generator with GPT-Neo model
+    story_gen = StoryGenerator()
 
     # Theme Selection
     themes = [
@@ -63,8 +66,7 @@ def main():
         print(player.display_stats())
         speak(player.display_stats(), narrator)
 
-    # Initialize Story Generator
-    story_gen = StoryGenerator()
+    # Generate the story's initial prompt based on theme
     game_history = story_gen.choose_theme_prompt(chosen_theme)
     print(f"\n{game_history}")
     speak(game_history, narrator)
@@ -100,6 +102,16 @@ def main():
             print(current_player.display_stats())
         else:
             print("Invalid action. Try again.")
+
+        # Update the story based on the player's action
+        updated_story = story_gen.generate_story(
+            chosen_theme,
+            user_action,
+            game_history,
+        )
+        game_history += f"\n{user_action}: {updated_story}"
+        print(f"\n{updated_story}")
+        speak(updated_story, narrator)
 
         current_player_index = (current_player_index + 1) % len(players)
 
