@@ -1,7 +1,6 @@
 from transformers import GPTNeoForCausalLM, GPT2Tokenizer
 import os
 
-
 class StoryGenerator:
     def __init__(self, model_path='./local_gpt_neo_model'):
         if not os.path.exists(model_path):
@@ -30,9 +29,12 @@ class StoryGenerator:
     def choose_theme_prompt(self, theme):
         return self.themes.get(theme, "Your adventure begins...")
 
-    def generate_story(self, theme, player_action, game_history, max_new_tokens=60):
+    def generate_story(self, theme, player_action, game_history, max_new_tokens=300):
         try:
+            # Get the prompt based on the theme
             theme_prompt = self.choose_theme_prompt(theme)
+
+            # Combine the theme, current game history, and player action into a prompt
             combined_prompt = (
                 f"Theme: {theme_prompt}\n"
                 f"Story so far: {game_history}\n"
@@ -40,8 +42,10 @@ class StoryGenerator:
                 "AI Dungeon Master responds:"
             )
 
+            # Tokenize and generate the story continuation
             inputs = self.tokenizer(combined_prompt, return_tensors="pt", truncation=True, max_length=512)
 
+            # Generate the next part of the story with a limit of max_new_tokens (150 by default)
             outputs = self.model.generate(
                 inputs['input_ids'],
                 attention_mask=inputs['attention_mask'],
@@ -54,8 +58,11 @@ class StoryGenerator:
                 pad_token_id=self.tokenizer.pad_token_id,
             )
 
+            # Decode the generated text and extract the part after the "AI Dungeon Master responds:"
             generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             response = generated_text.split("AI Dungeon Master responds:")[-1].strip()
+
+            # Return the story continuation
             return response
         except Exception as e:
             return f"Error during story generation: {e}"
