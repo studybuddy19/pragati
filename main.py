@@ -1,6 +1,7 @@
-import time
+import random
 from story_generator import StoryGenerator
-from game_logic import create_character, Player
+from game_logic import create_character
+from combat import Enemy, engage_combat
 from narrator import setup_narrator, speak
 
 # List of available commands
@@ -8,8 +9,9 @@ COMMANDS = [
     "explore - Look around your surroundings.",
     "attack - Attack a nearby enemy.",
     "use [item] - Use an item from your inventory.",
+    "inventory - View your inventory.",
+    "stats - Display your character's stats.",
     "run - Attempt to flee the current situation.",
-    "talk - Try to communicate with a character or enemy.",
     "quit - Exit the game.",
 ]
 
@@ -21,7 +23,7 @@ def display_commands():
 def main():
     print("Welcome to the AI Dungeon Master!")
 
-    # Set up the narrator with a scary voice for added immersion
+    # Set up the narrator
     narrator = setup_narrator()
     speak("Welcome to the AI Dungeon Master!", narrator)
 
@@ -58,8 +60,8 @@ def main():
         print(f"\nPlayer {i + 1} Character Creation:")
         players.append(create_character())
     for player in players:
-        print(f"Character Created: {player}")
-        speak(f"Character created: {player}", narrator)
+        print(player.display_stats())
+        speak(player.display_stats(), narrator)
 
     # Initialize Story Generator
     story_gen = StoryGenerator()
@@ -70,44 +72,36 @@ def main():
     # Game Loop
     current_player_index = 0
     while True:
-        try:
-            current_player = players[current_player_index]
-            print(f"\nIt's {current_player.name}'s turn!")
-            speak(f"It's {current_player.name}'s turn!", narrator)
+        current_player = players[current_player_index]
+        print(f"\nIt's {current_player.name}'s turn!")
+        speak(f"It's {current_player.name}'s turn!", narrator)
 
-            # Display available commands
-            display_commands()
+        display_commands()
 
-            # Get User Action via Text Input
-            user_action = input("\nEnter your action: ").strip()
+        user_action = input("\nEnter your action: ").strip()
 
-            if "quit" in user_action:
-                print("Thank you for playing! Goodbye!")
-                speak("Thank you for playing! Goodbye!", narrator)
-                break
-
-            # Process User Action
-            if user_action:
-                response = story_gen.generate_story(
-                    theme=chosen_theme,
-                    player_action=user_action,
-                    game_history=game_history
-                )
-                print(f"AI Dungeon Master: {response}")
-                speak(response, narrator)
-                game_history += f"\n{response}"
-            else:
-                print("No action detected. Skipping turn.")
-                speak("No action detected. Skipping turn.", narrator)
-
-            # Switch to Next Player
-            current_player_index = (current_player_index + 1) % len(players)
-
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            speak("An error occurred. Please try again.", narrator)
+        if "quit" in user_action:
+            print("Thank you for playing! Goodbye!")
+            speak("Thank you for playing! Goodbye!", narrator)
             break
 
+        if user_action == "explore":
+            if random.random() < 0.5:
+                found_item = random.choice(["Potion", "Sword", "Shield"])
+                print(f"You found a {found_item}!")
+                print(current_player.add_to_inventory(found_item))
+            else:
+                enemy = Enemy("Goblin", 30, 10)
+                if not engage_combat(current_player, enemy):
+                    break
+        elif user_action == "inventory":
+            print(current_player.view_inventory())
+        elif user_action == "stats":
+            print(current_player.display_stats())
+        else:
+            print("Invalid action. Try again.")
+
+        current_player_index = (current_player_index + 1) % len(players)
 
 if __name__ == "__main__":
     main()
